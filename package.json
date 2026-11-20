@@ -1,0 +1,64 @@
+{
+  "name": "@local-hosting/spool",
+  "packageManager": "yarn@4.18.1",
+  "version": "0.1.0",
+  "description": "Edge spool: ingress/egress frame queues (WAL) with compose/frames prepare and decode.",
+  "type": "module",
+  "license": "MPL-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/local-hosting/spool.git"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com",
+    "access": "restricted"
+  },
+  "bin": "./dist/cli/main.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./http": {
+      "types": "./dist/api/http.d.ts",
+      "import": "./dist/api/http.js",
+      "default": "./dist/api/http.js"
+    }
+  },
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && cp src/store/sync-wait.cjs dist/store/sync-wait.cjs",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "validate": "yarn typecheck",
+    "test": "vitest run",
+    "pretest": "yarn workspace @local-hosting/compose build && yarn workspace @local-hosting/vocab build && yarn workspace @local-hosting/frames build && yarn build",
+    "ci": "yarn validate && yarn build && yarn test",
+    "test:watch": "vitest",
+    "start": "node --import tsx src/api/start-server.ts",
+    "spool": "node --import tsx src/cli/main.ts"
+  },
+  "dependencies": {
+    "@local-hosting/compose": "workspace:*",
+    "@local-hosting/frames": "workspace:*",
+    "@local-hosting/vocab": "workspace:*",
+    "deasync": "^0.1.32",
+    "rocksdb": "^5.2.1"
+  },
+  "devDependencies": {
+    "@types/deasync": "^0.1.5",
+    "@types/node": "^22.13.10",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.3",
+    "vite": "^8.3.8",
+    "vitest": "^5.1.1"
+  },
+  "engines": {
+    "node": ">=26.0.0"
+  }
+}
