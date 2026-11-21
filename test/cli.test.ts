@@ -14,7 +14,8 @@ describe('spool CLI', () => {
   })
 
   function run(args: string[]): { status: number | null; stdout: string; stderr: string } {
-    const res = spawnSync('yarn', ['spool', ...args], {
+    const cli = join(packageRoot, 'dist/cli/main.js')
+    const res = spawnSync(process.execPath, [cli, ...args], {
       cwd: packageRoot,
       env: { ...process.env, SPOOL_DATA_DIR: dataDir, SPOOL_PEER: 'cli-peer' },
       encoding: 'utf8',
