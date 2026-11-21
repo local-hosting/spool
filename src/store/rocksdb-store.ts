@@ -1,11 +1,25 @@
+import { createRequire } from 'node:module'
 import { mkdirSync, rmSync } from 'node:fs'
 import path from 'node:path'
-import rocksdbFactory from 'rocksdb'
 import type { MeshEnvelopeV1, IngressWalRecord } from '../types/envelope.js'
 import type { SpoolState } from '../types/config.js'
 import type { SpoolStore } from './types.js'
 import { SpoolStoreBase } from './base-store.js'
-import { waitForCallback, waitForGet, waitForPut } from './sync-wait.js'
+
+const require = createRequire(import.meta.url)
+
+function openRocksDb(location: string): LevelDownDb {
+  const factory = require('rocksdb') as (loc: string) => LevelDownDb
+  return factory(location)
+}
+
+function syncWait() {
+  return require('./sync-wait.cjs') as {
+    waitForCallback: (run: (done: (error?: Error) => void) => void) => void
+    waitForGet: (db: LevelDownDb, key: string) => string | undefined
+    waitForPut: (db: LevelDownDb, key: string, val: string) => void
+  }
+}
 
 const DIR_NAME = 'rocksdb'
 
@@ -56,25 +70,28 @@ export class RocksdbSpoolStore extends SpoolStoreBase {
     instance: LevelDownDb,
     options: { createIfMissing: boolean; errorIfExists: boolean },
   ): void {
+    const { waitForCallback } = syncWait()
     waitForCallback((done) => instance.open(options, done))
   }
 
   private dbClose(instance: LevelDownDb): void {
+    const { waitForCallback } = syncWait()
     waitForCallback((done) => instance.close(done))
   }
 
   ensureReady(): void {
     mkdirSync(this.dataDir, { recursive: true })
     if (!this.db) {
-      this.db = rocksdbFactory(this.location) as LevelDownDb
+      this.db = openRocksDb(this.location)
     }
     this.dbOpen(this.db, { createIfMissing: true, errorIfExists: false })
   }
 
   hasPersistedState(): boolean {
+    const { waitForGet } = syncWait()
     if (!this.db) {
       try {
-        const probe = rocksdbFactory(this.location) as LevelDownDb
+        const probe = openRocksDb(this.location)
         this.dbOpen(probe, { createIfMissing: false, errorIfExists: false })
         const raw = waitForGet(probe, KEY.state)
         this.dbClose(probe)
@@ -87,16 +104,19 @@ export class RocksdbSpoolStore extends SpoolStoreBase {
   }
 
   getState(fallbackPeer: string): SpoolState {
+    const { waitForGet } = syncWait()
     const raw = waitForGet(this.database(), KEY.state)
     if (typeof raw !== 'string') return this.emptyState(fallbackPeer)
     return this.coerceState(JSON.parse(raw) as SpoolState, fallbackPeer)
   }
 
   saveState(state: SpoolState): void {
+    const { waitForPut } = syncWait()
     waitForPut(this.database(), KEY.state, JSON.stringify(state))
   }
 
   appendOneIngress(record: IngressWalRecord): void {
+    const { waitForGet, waitForPut } = syncWait()
     const db = this.database()
     const countRaw = waitForGet(db, KEY.ingressCount)
     const count = countRaw ? Number(countRaw) : 0
@@ -106,6 +126,7 @@ export class RocksdbSpoolStore extends SpoolStoreBase {
   }
 
   getAllIngress(): IngressWalRecord[] {
+    const { waitForGet } = syncWait()
     const db = this.database()
     const countRaw = waitForGet(db, KEY.ingressCount)
     const count = countRaw ? Number(countRaw) : 0
@@ -121,11 +142,13 @@ export class RocksdbSpoolStore extends SpoolStoreBase {
   }
 
   appendOneEgressAudit(envelope: MeshEnvelopeV1): void {
+    const { waitForPut } = syncWait()
     waitForPut(this.database(), KEY.egressAudit(this.auditCount), JSON.stringify(envelope))
     this.auditCount += 1
   }
 
   replaceAllIngress(records: IngressWalRecord[]): void {
+    const { waitForCallback, waitForGet, waitForPut } = syncWait()
     const db = this.database()
     const priorRaw = waitForGet(db, KEY.ingressCount)
     const prior = priorRaw ? Number(priorRaw) : 0
