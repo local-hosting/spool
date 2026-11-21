@@ -97,3 +97,4 @@ yarn workspace @local-hosting/spool ci
 ```
 
 Depends on `@local-hosting/compose`, `@local-hosting/frames`, `@local-hosting/vocab` (workspace).
+`main` is PR-only; see [branch-protection](https://github.com/local-hosting/workspace/blob/main/docs/branch-protection.md).
