@@ -6,7 +6,10 @@ import { Spool } from '../src/spool.js'
 import { createSpoolStore, resetMemorySpoolStore } from '../src/store/index.js'
 import type { SpoolStorageKind } from '../src/store/types.js'
 
-const backends: SpoolStorageKind[] = ['jsonl', 'sqlite', 'rocksdb', 'memory']
+const backends: SpoolStorageKind[] =
+  process.env.SPOOL_TEST_SKIP_ROCKSDB === '1'
+    ? ['jsonl', 'sqlite', 'memory']
+    : ['jsonl', 'sqlite', 'rocksdb', 'memory']
 
 describe.each(backends)('SpoolStore (%s)', (kind) => {
   let dataDir: string

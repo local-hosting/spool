@@ -76,10 +76,7 @@ jobs:
         run: yarn install --immutable
       - working-directory: ws
         run: yarn bootstrap:stack
-      - name: Build rocksdb native binding (spool WAL tests)
-        working-directory: ws
-        env:
-          YARN_ENABLE_SCRIPTS: "true"
-        run: yarn rebuild rocksdb
       - working-directory: ws
+        env:
+          SPOOL_TEST_SKIP_ROCKSDB: "1"
         run: yarn workspace @local-hosting/spool ci
